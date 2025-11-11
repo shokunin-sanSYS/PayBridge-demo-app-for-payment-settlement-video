@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayBridge - 決済ブリッジプラットフォーム</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: #0a0e27;
+            color: #e0e6ed;
+            overflow-x: hidden;
+        }
+
+        /* タイトルバナーアニメーション */
+        .title-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a237e 0%, #0d47a1 50%, #01579b 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeOut 0.8s ease-in-out 2.5s forwards;
+        }
+
+        .title-banner h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 1rem;
+            animation: slideUp 1s ease-out;
+        }
+
+        .title-banner .subtitle {
+            font-size: 1.5rem;
+            color: #64b5f6;
+            animation: slideUp 1s ease-out 0.3s backwards;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                visibility: hidden;
+            }
+        }
+
+        /* メインコンテナ */
+        .app-container {
+            opacity: 0;
+            animation: fadeIn 0.8s ease-in-out 3s forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* ヘッダー */
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 1.2rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 1px;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-item {
+            color: #90caf9;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(255,255,255,0.15);
+            color: #ffffff;
+        }
+
+        /* メインコンテンツ */
+        .main-content {
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* ステータスバー */
+        .status-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .status-card {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #42a5f5, #64b5f6);
+        }
+
+        .status-label {
+            font-size: 0.9rem;
+            color: #90caf9;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .status-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.3rem;
+        }
+
+        .status-change {
+            font-size: 0.85rem;
+            color: #66bb6a;
+        }
+
+        .status-change.negative {
+            color: #ef5350;
+        }
+
+        /* アラート */
+        .alert-section {
+            background: linear-gradient(135deg, #c62828 0%, #d32f2f 100%);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            animation: pulse 2s infinite;
+            box-shadow: 0 4px 20px rgba(198, 40, 40, 0.4);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 4px 20px rgba(198, 40, 40, 0.4);
+            }
+            50% {
+                box-shadow: 0 4px 30px rgba(198, 40, 40, 0.8);
+            }
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        /* グラフセクション */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: #151b3d;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            border: 1px solid #1e3c72;
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #90caf9;
+        }
+
+        /* トランザクションテーブル */
+        .transaction-table {
+            background: #151b3d;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            border: 1px solid #1e3c72;
+        }
+
+        .table-header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid #1e3c72;
+        }
+
+        th {
+            color: #90caf9;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        tr:hover {
+            background: rgba(30, 60, 114, 0.3);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: rgba(102, 187, 106, 0.2);
+            color: #66bb6a;
+        }
+
+        .status-pending {
+            background: rgba(255, 167, 38, 0.2);
+            color: #ffa726;
+        }
+
+        .status-failed {
+            background: rgba(239, 83, 80, 0.2);
+            color: #ef5350;
+        }
+
+        /* 設定ページ */
+        .settings-grid {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .settings-section {
+            background: #151b3d;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            border: 1px solid #1e3c72;
+        }
+
+        .settings-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #90caf9;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #1e3c72;
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .toggle-switch {
+            width: 50px;
+            height: 26px;
+            background: #555;
+            border-radius: 13px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #42a5f5;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            left: 26px;
+        }
+
+        /* レポートボタン */
+        .report-button {
+            background: linear-gradient(135deg, #1e88e5 0%, #1976d2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(30, 136, 229, 0.3);
+        }
+
+        .report-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30, 136, 229, 0.5);
+        }
+
+        /* レポートモーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #151b3d;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            border: 1px solid #1e3c72;
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #90caf9;
+        }
+
+        .close-button {
+            background: #555;
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- タイトルバナー -->
+    <div class="title-banner">
+        <h1>PayBridge</h1>
+        <div class="subtitle">法定通貨⇄ステーブルコイン決済ブリッジ</div>
+    </div>
+
+    <!-- メインアプリ -->
+    <div class="app-container">
+        <!-- ヘッダー -->
+        <header class="header">
+            <div class="logo">PayBridge</div>
+            <nav class="nav-menu">
+                <div class="nav-item active" data-page="dashboard">ダッシュボード</div>
+                <div class="nav-item" data-page="transactions">トランザクション</div>
+                <div class="nav-item" data-page="analytics">分析</div>
+                <div class="nav-item" data-page="settings">設定</div>
+            </nav>
+        </header>
+
+        <!-- メインコンテンツ -->
+        <main class="main-content">
+            <!-- ダッシュボードページ -->
+            <div class="page active" id="dashboard">
+                <!-- アラート -->
+                <div class="alert-section">
+                    <div class="alert-title">⚠️ 高負荷警告: EU地域で決済処理遅延が発生中</div>
+                    <div>現在の処理時間: <span id="alertTime">2.8秒</span> | 通常比: +140%</div>
+                </div>
+
+                <!-- ステータスカード -->
+                <div class="status-bar">
+                    <div class="status-card">
+                        <div class="status-label">本日の取引成功率</div>
+                        <div class="status-value"><span id="successRate">94.3</span>%</div>
+                        <div class="status-change">+5.2pt vs 先月</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-label">処理中トランザクション</div>
+                        <div class="status-value"><span id="pendingTx">1,247</span></div>
+                        <div class="status-change">+23% vs 1時間前</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-label">本日の決済額</div>
+                        <div class="status-value">¥<span id="todayAmount">42.8</span>M</div>
+                        <div class="status-change">+18.5% vs 昨日</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-label">返金率</div>
+                        <div class="status-value"><span id="refundRate">1.2</span>%</div>
+                        <div class="status-change negative">▼0.8pt vs 先月</div>
+                    </div>
+                </div>
+
+                <!-- グラフエリア -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-title">リアルタイム決済処理レート</div>
+                        <canvas id="realtimeChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">通貨別取引量</div>
+                        <canvas id="currencyChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-title">地域別成功率</div>
+                        <canvas id="regionChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">手数料収益推移</div>
+                        <canvas id="feeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- トランザクションページ -->
+            <div class="page" id="transactions">
+                <div class="transaction-table">
+                    <div class="table-header">最新トランザクション履歴</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>取引ID</th>
+                                <th>タイムスタンプ</th>
+                                <th>金額</th>
+                                <th>通貨ペア</th>
+                                <th>ステータス</th>
+                                <th>手数料</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 分析ページ -->
+            <div class="page" id="analytics">
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-title">月次成長率</div>
+                        <canvas id="growthChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">チャージバック分析</div>
+                        <canvas id="chargebackChart"></canvas>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 2rem;">
+                    <button class="report-button" onclick="generateReport()">詳細レポート生成</button>
+                </div>
+            </div>
+
+            <!-- 設定ページ -->
+            <div class="page" id="settings">
+                <div class="settings-grid">
+                    <div class="settings-section">
+                        <div class="settings-title">コンプライアンス設定</div>
+                        <div class="setting-item">
+                            <span>MiCA規制準拠モード</span>
+                            <div class="toggle-switch active"></div>
+                        </div>
+                        <div class="setting-item">
+                            <span>PSA自動レポート</span>
+                            <div class="toggle-switch active"></div>
+                        </div>
+                        <div class="setting-item">
+                            <span>為替変動アラート</span>
+                            <div class="toggle-switch active"></div>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-title">決済設定</div>
+                        <div class="setting-item">
+                            <span>自動チャージバック管理</span>
+                            <div class="toggle-switch active"></div>
+                        </div>
+                        <div class="setting-item">
+                            <span>税区分自動判定</span>
+                            <div class="toggle-switch active"></div>
+                        </div>
+                        <div class="setting-item">
+                            <span>リアルタイム為替最適化</span>
+                            <div class="toggle-switch"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- レポートモーダル -->
+    <div class="modal" id="reportModal">
+        <div class="modal-content">
+            <div class="modal-header">月次レポート生成完了</div>
+            <p style="margin-bottom: 1rem;">2025年11月の詳細レポートが生成されました。</p>
+            <ul style="margin-left: 1.5rem; margin-bottom: 1rem; line-height: 1.8;">
+                <li>総取引数: 148,392件</li>
+                <li>総取引額: ¥1,847M</li>
+                <li>平均成功率: 94.7%</li>
+                <li>コンプライアンス準拠率: 100%</li>
+                <li>チャージバック回収率: 78%</li>
+            </ul>
+            <button class="close-button" onclick="closeModal()">閉じる</button>
+        </div>
+    </div>
+
+    <script>
+        // ページ切り替え
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById(this.dataset.page).classList.add('active');
+            });
+        });
+
+        // トグルスイッチ
+        document.querySelectorAll('.toggle-switch').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+        });
+
+        // リアルタイムデータ更新
+        setInterval(() => {
+            document.getElementById('successRate').textContent = (94 + Math.random() * 2).toFixed(1);
+            document.getElementById('pendingTx').textContent = (1200 + Math.floor(Math.random() * 100)).toLocaleString();
+            document.getElementById('todayAmount').textContent = (42 + Math.random() * 2).toFixed(1);
+            document.getElementById('refundRate').textContent = (1.0 + Math.random() * 0.5).toFixed(1);
+            document.getElementById('alertTime').textContent = (2.5 + Math.random() * 0.8).toFixed(1) + '秒';
+        }, 2000);
+
+        // リアルタイムチャート
+        const realtimeCtx = document.getElementById('realtimeChart').getContext('2d');
+        const realtimeData = {
+            labels: [],
+            datasets: [{
+                label: '処理数/秒',
+                data: [],
+                borderColor: '#42a5f5',
+                backgroundColor: 'rgba(66, 165, 245, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        };
+
+        const realtimeChart = new Chart(realtimeCtx, {
+            type: 'line',
+            data: realtimeData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#1e3c72' },
+                        ticks: { color: '#90caf9' }
+                    },
+                    x: {
+                        grid: { color: '#1e3c72' },
+                        ticks: { color: '#90caf9' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#90caf9' }
+                    }
+                }
+            }
+        });
+
+        // リアルタイムチャート更新
+        setInterval(() => {
+            const now = new Date();
+            const timeStr = now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0');
+            
+            if (realtimeData.labels.length > 20) {
+                realtimeData.labels.shift();
+                realtimeData.datasets[0].data.shift();
+            }
+            
+            realtimeData.labels.push(timeStr);
+            realtimeData.datasets[0].data.push(150 + Math.random() * 50);
+            realtimeChart.update('none');
+        }, 3000);
+
+        // 通貨別チャート
+        const currencyCtx = document.getElementById('currencyChart').getContext('2d');
+        new Chart(currencyCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['JPY→USDT', 'EUR→USDC', 'USD→USDT', 'GBP→USDC'],
+                datasets: [{
+                    data: [45, 28, 18, 9],
+                    backgroundColor: ['#42a5f5', '#66bb6a', '#ffa726', '#ab47bc']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#90caf9' }
+                    }
+                }
+            }
+        });
+
+        // 地域別チャート
+        const regionCtx = document.getElementById('regionChart').getContext('2d');
+        new Chart(regionCtx, {
+            type: 'bar',
+            data: {
+                labels: ['日本', 'EU', '米国', '英国', 'アジア'],
+                datasets: [{
+                    label: '成功率 (%)',
+                    data: [96.2, 89.5, 94.8, 93.1, 91.7],
+                    backgroundColor: '#42a5f5'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: '#1e3c72' },
+                        ticks: { color: '#90caf9' }
+                    },
+                    x: {
+                        grid: { color: '#1e3c72' },
+                        ticks: { color: '#90caf9' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#90caf9' }
+                    }
+                }
+            }
+        });
+
+        // 手数料チャート
+        const feeCtx = document.getElementById('feeChart').getContext('2d');
+        new Chart(feeCtx, {
+            type: 'line',
+            data: {
+                labels: ['10/1', '10/8', '10/15', '10/22', '10/29', '11/5'],
+                datasets: [{
+                    label: '収益 (万円)',
+                    data: [820, 950, 1100, 1350, 1520, 1680],
+                    borderColor: '#66bb6a',
+                    backgroundColor: 'rgba(102, 187, 106, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#1e3c72' },
+                        ticks: { color: '#90caf9' }
+                    },
+                    x: {
+                        grid: { color: '#1e3c72' },
+                        ticks: { color: '#90caf9' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#90caf9' }
+                    }
+                }
+            }
+        });
+
+        // 成長率チャート
+        const growthCtx = document.getElementById('growthChart').getContext('2d');
+        new Chart(growthCtx, {
+            type: 'bar',
+            data: {
+                labels: ['6月', '7月', '8月', '9月', '10月', '11月'],
+                datasets: [{
+                    label: '成長率 (%)',
+                    data: [12, 18, 25, 32, 41, 48],
+                    backgroundColor: '#42a5f5'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#1e3c72' },
+                        ticks: { color: '#90caf9' }
+                    },
+                    x: {
+                        grid: { color: '#1e3c72' },
+                        ticks: { color: '#90caf9' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#90caf9' }
+                    }
+                }
+            }
+        });
+
+        // チャージバックチャート
+        const chargebackCtx = document.getElementById('chargebackChart').getContext('2d');
+        new Chart(chargebackCtx, {
+            type: 'line',
+            data: {
+                labels: ['6月', '7月', '8月', '9月', '10月', '11月'],
+                datasets: [{
+                    label: '発生率 (%)',
+                    data: [2.8, 2.5, 2.1, 1.8, 1.4, 1.2],
+                    borderColor: '#ef5350',
+                    tension: 0.4
+                }, {
+                    label: '回収率 (%)',
+                    data: [65, 68, 71, 74, 76, 78],
+                    borderColor: '#66bb6a',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#1e3c72' },
+                        ticks: { color: '#90caf9' }
+                    },
+                    x: {
+                        grid: { color: '#1e3c72' },
+                        ticks: { color: '#90caf9' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#90caf9' }
+                    }
+                }
+            }
+        });
+
+        // トランザクションテーブル生成
+        function generateTransactions() {
+            const tbody = document.getElementById('transactionBody');
+            const statuses = ['success', 'pending', 'failed'];
+            const statusLabels = ['完了', '処理中', '失敗'];
+            const currencies = ['JPY→USDT', 'EUR→USDC', 'USD→USDT', 'GBP→USDC'];
+            
+            for (let i = 0; i < 15; i++) {
+                const statusIdx = Math.random() > 0.1 ? (Math.random() > 0.15 ? 0 : 1) : 2;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>TX${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}</td>
+                    <td>${new Date(Date.now() - Math.random() * 3600000).toLocaleString('ja-JP')}</td>
+                    <td>¥${(Math.random() * 500000).toFixed(0).toLocaleString()}</td>
+                    <td>${currencies[Math.floor(Math.random() * currencies.length)]}</td>
+                    <td><span class="status-badge status-${statuses[statusIdx]}">${statusLabels[statusIdx]}</span></td>
+                    <td>¥${(Math.random() * 1000).toFixed(0)}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        generateTransactions();
+
+        // レポート生成
+        function generateReport() {
+            document.getElementById('reportModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('reportModal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
